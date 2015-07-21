@@ -14,7 +14,6 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.log4j.Logger;
 
-
 public class NioClient extends Thread {
 
 	private static final Logger logger = Logger.getLogger(NioClient.class);
@@ -51,7 +50,7 @@ public class NioClient extends Thread {
 	public NioClient() throws Exception {
 		selector = Selector.open();
 
-		InetSocketAddress isa = new InetSocketAddress("123.65.98.54", 968);
+		InetSocketAddress isa = new InetSocketAddress("127.0.0.1", 8012);
 		sc = SocketChannel.open();
 		sc.connect(isa);
 		sc.configureBlocking(false);
@@ -74,25 +73,39 @@ public class NioClient extends Thread {
 	public void run() {
 		try {
 			while (!Thread.interrupted()) {
-				selector.select();
+				int i = selector.select();
 				
-				Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
+				System.out.println(i);
+
+				Iterator<SelectionKey> iterator = selector.selectedKeys()
+						.iterator();
 
 				while (iterator.hasNext()) {
 
 					SelectionKey selectionKey = iterator.next();
 					iterator.remove();
 
-					if(selectionKey.isConnectable())
-					{
-						System.out.println("------------");
-					}
-					
 					if (selectionKey.isValid()) {
+						if (selectionKey.isConnectable()) {
+							SocketChannel channel = (SocketChannel) selectionKey
+									.channel();
+
+							// 如果正在连接，则完成连接
+							if (channel.isConnectionPending()) {
+								channel.finishConnect();
+							}
+
+							channel.configureBlocking(false);
+							channel.register(selector, SelectionKey.OP_READ);
+							
+							sendMessage(MessageUtil.get00041());
+						}
+
 						if (selectionKey.isReadable()) {
 							processRead(selectionKey);
 						}
 					}
+
 				}
 			}
 		} catch (Exception e) {
@@ -110,7 +123,7 @@ public class NioClient extends Thread {
 
 			// 对方主动关闭
 			if (i == -1) {
-				logger.error("socket closed by server.");
+				throw new Exception("socket closed by server.");
 			}
 
 			if (i > 0) {
@@ -134,7 +147,8 @@ public class NioClient extends Thread {
 						// 取消息类型
 						int msgType = getMessageType(bytes);
 
-						logger.info(" Get message:" + Integer.toHexString(msgType));
+						logger.info(" Get message:"
+								+ Integer.toHexString(msgType));
 
 						// 0x8041 登录请求回复
 						if (msgType == 0x8041) {
@@ -156,16 +170,16 @@ public class NioClient extends Thread {
 				}
 			}
 
-		} catch (IOException e) {
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			logger.error(e.getMessage() ,e );
+			logger.error(e.getMessage(), e);
 			selectionKey.cancel();
 			try {
 				selectionKey.channel().close();
 			} catch (IOException e1) {
-				logger.error(e.getMessage() ,e );
+				logger.error(e.getMessage(), e);
 			}
-			
+
 			MessageTest.flag = true;
 		}
 	}
@@ -232,7 +246,8 @@ public class NioClient extends Thread {
 			System.arraycopy(bytes, 40, body, 0, bodyLength);
 
 			// 解密
-			Key secretKey = new SecretKeySpec(MessageUtil.sign(MessageUtil.SIGN_STR.getBytes()), "AES");
+			Key secretKey = new SecretKeySpec(
+					MessageUtil.sign(MessageUtil.SIGN_STR.getBytes()), "AES");
 			body = MessageUtil.decrypt(body, secretKey);
 
 			if (body.length != 40) {
@@ -241,8 +256,8 @@ public class NioClient extends Thread {
 
 			// 登录随机串
 			byte[] loginStrByte = new byte[36];
-			System.arraycopy(body, 4, loginStrByte, 0, 36);			
-			
+			System.arraycopy(body, 4, loginStrByte, 0, 36);
+
 			this.loginStr = loginStrByte;
 
 			// 写入登录认证
@@ -264,7 +279,7 @@ public class NioClient extends Thread {
 	 */
 	public void process8004(byte[] bytes) {
 		try {
-			
+
 			logger.info("process 8004 set flag true.");
 			MessageTest.flag = true;
 
@@ -282,7 +297,8 @@ public class NioClient extends Thread {
 			System.arraycopy(bytes, 40, body, 0, bodyLength);
 
 			// 解密
-			Key secretKey = new SecretKeySpec(MessageUtil.sign(MessageUtil.SIGN_STR.getBytes()), "AES");
+			Key secretKey = new SecretKeySpec(
+					MessageUtil.sign(MessageUtil.SIGN_STR.getBytes()), "AES");
 			body = MessageUtil.decrypt(body, secretKey);
 
 			if (body.length != 42) {

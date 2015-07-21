@@ -21,7 +21,7 @@ public class MessageTest {
 			flag = false;
 			client = new NioClient();
 			client.start();
-			client.sendMessage(MessageUtil.get00041());
+//			client.sendMessage(MessageUtil.get00041());
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			System.exit(0);
@@ -37,7 +37,7 @@ public class MessageTest {
 					flag = false;
 					client = new NioClient();
 					client.start();
-					client.sendMessage(MessageUtil.get00041());
+//					client.sendMessage(MessageUtil.get00041());
 				} catch (Exception e) {
 					logger.error(e.getMessage(), e);
 				}
