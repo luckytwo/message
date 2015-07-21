@@ -52,17 +52,10 @@ public class NioClient extends Thread {
 		selector = Selector.open();
 
 		InetSocketAddress isa = new InetSocketAddress("123.65.98.54", 968);
-
 		sc = SocketChannel.open();
-
-		sc.configureBlocking(false);
-		
-		sc.register(selector, SelectionKey.OP_CONNECT);
-
 		sc.connect(isa);
-
-		
-
+		sc.configureBlocking(false);
+		sc.register(selector, SelectionKey.OP_READ);
 	}
 
 	public void sendMessage(ByteBuffer bf) {
@@ -82,7 +75,7 @@ public class NioClient extends Thread {
 		try {
 			while (!Thread.interrupted()) {
 				selector.select();
-
+				
 				Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
 
 				while (iterator.hasNext()) {
@@ -92,9 +85,7 @@ public class NioClient extends Thread {
 
 					if(selectionKey.isConnectable())
 					{
-						SocketChannel channel = (SocketChannel) selectionKey   
-                                .channel(); 
-						channel.register(selector, SelectionKey.OP_READ);
+						System.out.println("------------");
 					}
 					
 					if (selectionKey.isValid()) {
@@ -167,7 +158,15 @@ public class NioClient extends Thread {
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage() ,e );
+			selectionKey.cancel();
+			try {
+				selectionKey.channel().close();
+			} catch (IOException e1) {
+				logger.error(e.getMessage() ,e );
+			}
+			
+			MessageTest.flag = true;
 		}
 	}
 
